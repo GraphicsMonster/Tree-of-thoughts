@@ -25,7 +25,28 @@ class BigramLanguageModel(nn.Module):
         logits = self.linear(X)
 
         return logits
-    
+
+    def generate(self, X, max_len):
+        # B: (B, T)
+        B, T = X.shape
+
+        for i in range(max_len):
+            # get the last max_len tokens
+            logits = X[:, -max_len:]
+            # generate the predictions
+            logits = self.forward(logits)
+            # logits: (B, 1, C)
+            logits = logits[:, -1, :]
+            # generate the probability distribution
+            softmax = nn.Softmax(dim=-1)
+            logits = softmax(logits)
+            # predict the next token's index
+            next_token_index = torch.multinomial(logits, num_samples=1)
+            # append the next token's index to the input
+            X = torch.cat([X, next_token_index], dim=-1)
+
+        return X
+
 class Head(nn.Module):
     def __init__(self):
         super(Head, self).__init__()
@@ -51,7 +72,7 @@ class Head(nn.Module):
         # compute attention values
         output = wei @ self.value(X)
         return output
-    
+
 # let's test this model
 model = BigramLanguageModel().to(device)
 X = torch.randint(0, vocab_size, (32, max_seq_len), dtype=torch.long, device=device)
@@ -59,3 +80,6 @@ print("X.shape: ", X.shape)
 # test the model
 logits = model(X)
 print("returned logits shape: ", logits.shape) # torch.shape(logits) == (32, 8, 1000)
+
+generated_logits = model.generate(X, 8)
+print(generated_logits.shape)
