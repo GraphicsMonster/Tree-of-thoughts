@@ -27,28 +27,26 @@ class Embedding_model(nn.Module):
 
         return embeddings
 
-    def generate(self, X, max_len):
-        # B: (B, T)
-        B, T = X.shape
+def generate(X, max_len):
+      
+    B, T = X.shape
 
-        for i in range(max_len):
-            # get the last max_len tokens
-            context_window = X[:, -max_len:]
-            # generate the predictions
-            embeddings = self.forward(context_window)
-            # get the predictions
-            logits = self.linear(embeddings)
-            # logits: (B, 1, C)
-            logits = logits[:, -1, :]
-            # generate the probability distribution
-            softmax = nn.Softmax(dim=-1)
-            logits = softmax(logits)
-            # predict the next token's index
-            next_token_index = torch.multinomial(logits, num_samples=1)
-            # append the next token's index to the input
-            X = torch.cat([X, next_token_index], dim=-1)
+    for _ in range(max_len):
 
-        return X
+        # get the context_window
+        context_window = X[:, -max_seq_len:]
+        # get the logits
+        logits = model(context_window)
+        # get the last token
+        last_token = logits[:, -1, :]
+        # apply softmax
+        last_token = nn.Softmax(dim=-1)(last_token)
+        # get the next token
+        next_token = torch.multinomial(last_token, num_samples=1)
+        # append the next token to the context window
+        X = torch.cat([X, next_token], dim=-1)
+    
+    return X
 
 class Head(nn.Module):
     def __init__(self, head_size):
@@ -95,7 +93,7 @@ print("X.shape: ", X.shape)
 embeddings = model(X)
 print("returned logits shape: ", embeddings.shape) # torch.shape(logits) == (32, 8, 1000)
 
-generated_logits = model.generate(X, 8)
+generated_logits = generate(X, 8)
 print(generated_logits.shape) # torch.shape(generated_logits) == (32, 16)
 
 multihead = MultiHeadAttention(num_heads, head_size).to(device)
