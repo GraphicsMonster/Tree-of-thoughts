@@ -12,10 +12,10 @@ head_size = 32
 # Device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-class BigramLanguageModel(nn.Module):
+class Embedding_model(nn.Module):
 
     def __init__(self):
-        super(BigramLanguageModel, self).__init__()
+        super(Embedding_model, self).__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, embedding_dim)
         self.positional_embedding_table = nn.Embedding(max_seq_len, embedding_dim)
         self.linear = nn.Linear(embedding_dim, vocab_size)
@@ -23,10 +23,9 @@ class BigramLanguageModel(nn.Module):
     def forward(self, X):
         token_embedding = self.token_embedding_table(X)
         positional_embedding = self.positional_embedding_table(torch.arange(max_seq_len))
-        X = token_embedding + positional_embedding
-        logits = self.linear(X)
+        embeddings = token_embedding + positional_embedding
 
-        return logits
+        return embeddings
 
     def generate(self, X, max_len):
         # B: (B, T)
@@ -34,9 +33,11 @@ class BigramLanguageModel(nn.Module):
 
         for i in range(max_len):
             # get the last max_len tokens
-            logits = X[:, -max_len:]
+            context_window = X[:, -max_len:]
             # generate the predictions
-            logits = self.forward(logits)
+            embeddings = self.forward(context_window)
+            # get the predictions
+            logits = self.linear(embeddings)
             # logits: (B, 1, C)
             logits = logits[:, -1, :]
             # generate the probability distribution
@@ -68,7 +69,8 @@ class Head(nn.Module):
         mask = torch.tril(tril, diagonal=0)
         wei = query @ key.transpose(-1, -2) // (C ** 0.5)
         wei = wei.masked_fill(mask == 0, float('-inf'))
-        wei = nn.Softmax(wei, dim=-1)
+        sotmax = nn.Softmax(dim=-1)
+        wei = sotmax(wei)
         wei = self.dropout(wei)
 
         # compute attention values
@@ -86,16 +88,16 @@ class MultiHeadAttention(nn.Module):
         return output
 
 # let's test this model
-model = BigramLanguageModel().to(device)
+model = Embedding_model().to(device)
 X = torch.randint(0, vocab_size, (32, max_seq_len), dtype=torch.long, device=device)
 print("X.shape: ", X.shape)
 # test the model
-logits = model(X)
-print("returned logits shape: ", logits.shape) # torch.shape(logits) == (32, 8, 1000)
+embeddings = model(X)
+print("returned logits shape: ", embeddings.shape) # torch.shape(logits) == (32, 8, 1000)
 
 generated_logits = model.generate(X, 8)
 print(generated_logits.shape) # torch.shape(generated_logits) == (32, 16)
 
 multihead = MultiHeadAttention(num_heads, head_size).to(device)
-output = multihead(logits)
-print('multiheaded attention output shape: ', output.shape) # torch.shape(output) == (32, 8, 128)
+attention_scores = multihead(embeddings)
+print('attention scores shape: ', attention_scores.shape)
