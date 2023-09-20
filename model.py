@@ -98,19 +98,9 @@ class BigramLanguageModel(nn.Module):
         return X
 
 # let's test this model
-model = Embedding_model().to(device)
 X = torch.randint(0, vocab_size, (32, max_seq_len), dtype=torch.long, device=device)
 print("X.shape: ", X.shape)
-# test the model
-embeddings = model(X)
-print("returned logits shape: ", embeddings.shape) # torch.shape(logits) == (32, 8, 1000)
 
-# let's test the bigram language model
 bigram = BigramLanguageModel().to(device)
-
 generated_logits = bigram.generate(X, 8)
 print(generated_logits.shape) # torch.shape(generated_logits) == (32, 16)
-
-multihead = MultiHeadAttention(num_heads, head_size).to(device)
-attention_scores = multihead(embeddings)
-print('attention scores shape: ', attention_scores.shape)
