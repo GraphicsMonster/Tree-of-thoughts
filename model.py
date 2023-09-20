@@ -4,8 +4,10 @@ import torch.nn as nn
 # Hyperparameters
 vocab_size = 1000
 max_seq_len = 8
-embedding_dim = 32
+embedding_dim = 128
 dropout = 0.1
+num_heads = 4
+head_size = 32
 
 # Device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -48,11 +50,11 @@ class BigramLanguageModel(nn.Module):
         return X
 
 class Head(nn.Module):
-    def __init__(self):
+    def __init__(self, head_size):
         super(Head, self).__init__()
-        self.key = nn.Linear(embedding_dim, embedding_dim)
-        self.value = nn.Linear(embedding_dim, embedding_dim)
-        self.query = nn.Linear(embedding_dim, embedding_dim)
+        self.key = nn.Linear(embedding_dim, head_size)
+        self.value = nn.Linear(embedding_dim, head_size)
+        self.query = nn.Linear(embedding_dim, head_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, X):
@@ -72,6 +74,16 @@ class Head(nn.Module):
         # compute attention values
         output = wei @ self.value(X)
         return output
+    
+class MultiHeadAttention(nn.Module):
+    def __init__(self, num_heads, head_size):
+        super(MultiHeadAttention, self).__init__()
+        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.linear = nn.Linear(num_heads * head_size, embedding_dim)
+    def forward(self, X):
+        output = torch.cat([head(X) for head in self.heads], dim=-1)
+        output = self.linear(output.view(output.shape[0], output.shape[1], -1))
+        return output
 
 # let's test this model
 model = BigramLanguageModel().to(device)
@@ -82,4 +94,8 @@ logits = model(X)
 print("returned logits shape: ", logits.shape) # torch.shape(logits) == (32, 8, 1000)
 
 generated_logits = model.generate(X, 8)
-print(generated_logits.shape)
+print(generated_logits.shape) # torch.shape(generated_logits) == (32, 16)
+
+multihead = MultiHeadAttention(num_heads, head_size).to(device)
+output = multihead(logits)
+print('multiheaded attention output shape: ', output.shape) # torch.shape(output) == (32, 8, 128)
