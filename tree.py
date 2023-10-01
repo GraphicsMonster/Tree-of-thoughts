@@ -38,5 +38,20 @@ class TreeOfThoughts(nn.Module):
         node['children'].append(child_node)
         self._grow_tree_recursive(child_node, depth - 1)
 
-# we are operating under the assumption that my bigram modle is token level and already trained which it's not.
-# So we'll get to that later.
+    def visualize_tree(self, tree):
+        '''
+        This takes in a tree and prints it out in a nice format.
+        '''
+        self._visualize_tree_recursive(tree, 0)
+    
+    def _visualize_tree_recursive(self, node, indent=""):
+        '''
+        This takes in a node and prints it out in a nice format.
+        '''
+        new_str = indent + node['text'] + "\n"
+        for child in node['children']:
+            self._visualize_tree_recursive(child, indent + "  ")
+
+# Assumptions as of writing this: (1) The bigram model is token level and not character level.
+# (2) The bigram model is trained on a dataset that is properly processed to end sentences with a special token like
+# <eos> or something.
