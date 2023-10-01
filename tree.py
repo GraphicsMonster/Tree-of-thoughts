@@ -42,7 +42,7 @@ class TreeOfThoughts(nn.Module):
         '''
         This takes in a tree and prints it out in a nice format.
         '''
-        self._visualize_tree_recursive(tree, 0)
+        self._visualize_tree_recursive(tree, indent="")
     
     def _visualize_tree_recursive(self, node, indent=""):
         '''
@@ -50,7 +50,9 @@ class TreeOfThoughts(nn.Module):
         '''
         new_str = indent + node['text'] + "\n"
         for child in node['children']:
-            self._visualize_tree_recursive(child, indent + "  ")
+            new_str += self._visualize_tree_recursive(child, indent + "  ")
+
+        return new_str
 
 # Assumptions as of writing this: (1) The bigram model is token level and not character level.
 # (2) The bigram model is trained on a dataset that is properly processed to end sentences with a special token like
